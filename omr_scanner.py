@@ -245,3 +245,28 @@ if __name__=="__main__":
                 cv2.imshow("Detected Bubbles", data["canvas"])
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
+import os
+
+def process_omr_folder(folder_path, answer_key_path):
+    """
+    Process all OMR images in a folder using a given answer key.
+    Returns a dictionary {filename: score}.
+    """
+    from omr_scanner import load_answer_keys, grade_omr_image  # adjust if your grading function name differs
+
+    # Load answer key
+    answer_key = load_answer_keys(answer_key_path)
+
+    results = {}
+    for file_name in os.listdir(folder_path):
+        if file_name.lower().endswith((".png", ".jpg", ".jpeg")):
+            img_path = os.path.join(folder_path, file_name)
+            try:
+                # grade_omr_image should return the score
+                score = grade_omr_image(img_path, answer_key)
+                results[file_name] = score
+            except Exception as e:
+                results[file_name] = f"Error: {e}"
+
+    return results
+
