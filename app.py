@@ -1,4 +1,4 @@
-"""
+﻿"""
 app.py
 FastAPI backend:
 - POST /grade : single file upload (image + answer_key_version)

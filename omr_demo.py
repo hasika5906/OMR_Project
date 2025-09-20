@@ -1,4 +1,4 @@
-"""
+﻿"""
 omr_demo.py
 Simple demo to test OMR sheets using omr_scanner.py functions.
 Automatically loads a sheet, scans, grades, and prints the score.
