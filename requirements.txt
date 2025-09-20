@@ -1,0 +1,17 @@
+# Core
+streamlit
+numpy
+opencv-python-headless
+Pillow
+
+# Streamlit for interactive app
+streamlit
+
+# Optional: for JSON handling (usually built-in)
+# json is part of Python standard library, no need to install
+
+# Versions (optional, ensures compatibility)
+numpy==1.23.5
+opencv-python==4.7.0.72
+Pillow==10.0.0
+streamlit==1.29.0
