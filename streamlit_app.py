@@ -1,46 +1,67 @@
-# streamlit_app.py
 import streamlit as st
-from omr_scanner import process_omr_folder
 import os
+import tempfile
+from omr_scanner import process_omr_folder, load_answer_keys
+import cv2
 
-st.set_page_config(page_title="OMR Scanner", layout="centered")
+st.set_page_config(page_title="OMR Scanner", layout="wide")
+st.title("📄 OMR Scanner Web App")
 
-st.title("OMR Scanner Web App")
-st.write("Upload a folder of OMR sheets and get instant scores!")
+# Upload OMR Images
+omr_images = st.file_uploader(
+    "Upload OMR Images (PNG, JPG, JPEG)", 
+    type=["png", "jpg", "jpeg"], 
+    accept_multiple_files=True
+)
+answer_json = st.file_uploader("Upload Answer Key JSON", type=["json"])
 
-# Upload answer key
-answer_key_file = st.file_uploader("Upload Answer Key JSON", type="json")
+if omr_images and answer_json:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Save images
+        image_paths = []
+        for img_file in omr_images:
+            img_path = os.path.join(tmpdir, img_file.name)
+            with open(img_path, "wb") as f:
+                f.write(img_file.getbuffer())
+            image_paths.append(img_path)
 
-# Upload OMR images folder as a zip
-omr_zip = st.file_uploader("Upload OMR Sheets (ZIP)", type="zip")
+        # Save JSON
+        answer_key_path = os.path.join(tmpdir, "answer_key.json")
+        with open(answer_key_path, "wb") as f:
+            f.write(answer_json.getbuffer())
 
-if st.button("Process OMR Sheets"):
-    if answer_key_file is None or omr_zip is None:
-        st.warning("Please upload both answer key and OMR sheets ZIP.")
-    else:
-        import zipfile
-        import tempfile
+        # Load answer key
+        answer_key = load_answer_keys(answer_key_path)
 
-        # Save uploaded files to temporary files
-        with tempfile.TemporaryDirectory() as tmpdir:
-            answer_key_path = os.path.join(tmpdir, "answer_key.json")
-            with open(answer_key_path, "wb") as f:
-                f.write(answer_key_file.read())
+        st.info("Processing images...")
+        results = process_omr_folder(tmpdir, answer_key_path)
 
-            # Extract ZIP
-            omr_folder_path = os.path.join(tmpdir, "OMR_Images")
-            os.makedirs(omr_folder_path, exist_ok=True)
-            with zipfile.ZipFile(omr_zip, "r") as zip_ref:
-                zip_ref.extractall(omr_folder_path)
+        st.success("✅ Grading Complete!")
+        st.write("### Scores:")
+        st.table(results)
 
-            # Process all images
-            st.info("Processing OMR sheets, please wait...")
-            results = process_omr_folder(omr_folder_path, answer_key_path)
+        # Show each image with detected bubbles
+        for img_path in image_paths:
+            img_name = os.path.basename(img_path)
+            img = cv2.imread(img_path)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            blur = cv2.GaussianBlur(gray, (5, 5), 0)
+            th = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
 
-            if results:
-                st.success("Processing Complete!")
-                st.write("### Results")
-                for file, score in results.items():
-                    st.write(f"**{file}** : {score}")
-            else:
-                st.error("No images found or failed to process.")
+            contours, _ = cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            bubble_contours = []
+            for cnt in contours:
+                x, y, w, h = cv2.boundingRect(cnt)
+                aspect_ratio = w / float(h)
+                if 15 < w < 50 and 0.8 < aspect_ratio < 1.2:
+                    bubble_contours.append(cnt)
+
+            bubble_contours = sorted(bubble_contours, key=lambda c: cv2.boundingRect(c)[1])
+
+            # Draw bubbles on image
+            for cnt in bubble_contours:
+                x, y, w, h = cv2.boundingRect(cnt)
+                cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+            st.write(f"#### {img_name}")
+            st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), use_column_width=True)
