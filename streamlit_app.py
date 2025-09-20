@@ -1,59 +1,79 @@
 import streamlit as st
+from PIL import Image
+from omr_scanner import load_answer_keys, process_omr_image
 import zipfile
 import os
-from PIL import Image
-from omr_scanner import process_omr_image, load_answer_keys  # make sure these exist in omr_scanner.py
 
-st.set_page_config(page_title="OMR Scanner", layout="wide")
-st.title("OMR Scanner Web App")
-
-# Upload OMR sheet(s)
-uploaded_files = st.file_uploader(
-    "Upload OMR sheet images (JPEG, PNG) or ZIP of images", 
-    type=["jpg", "jpeg", "png", "zip"], 
-    accept_multiple_files=True
+st.set_page_config(
+    page_title="OMR Scanner 🎨",
+    page_icon="📝",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-# Select answer key
-answer_key_path = st.file_uploader("Upload Answer Key JSON", type=["json"])
+# Gradient background
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background: linear-gradient(to right, #f0f8ff, #e6e6fa);
+    }
+    .stButton>button {
+        background-color: #FF4B4B; 
+        color: white; 
+        border-radius:10px; 
+        font-weight:bold;
+    }
+    .stTabs [role='tab'] {font-weight:bold; color:#4B0082;}
+    h1, h2, h3, h4, h5, h6 {color:#FF8C00;}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-if uploaded_files and answer_key_path:
-    # Save uploaded answer key
-    answer_key_file_path = os.path.join("temp", "answer_key.json")
-    os.makedirs("temp", exist_ok=True)
-    with open(answer_key_file_path, "wb") as f:
-        f.write(answer_key_path.getbuffer())
+# Sidebar
+st.sidebar.title("OMR Scanner 🌈")
+st.sidebar.markdown(
+    """
+    Upload OMR sheets (JPEG/PNG) or a ZIP folder containing multiple images.
+    Select the answer key set and click 'Process'.
+    """
+)
 
-    # Load answer key
-    answer_key = load_answer_keys(answer_key_file_path)
+answer_key_set = st.sidebar.selectbox("Select Answer Key", ["SetA", "SetB"])
+answer_key_path = f"answer_key_{answer_key_set}.json"
+answer_key = load_answer_keys(answer_key_path)
 
-    # Prepare list of images to process
-    images_to_process = []
+# Tabs
+tab1, tab2 = st.tabs(["Single Image Upload 🖼️", "Batch Upload (ZIP) 📦"])
 
-    for uploaded_file in uploaded_files:
-        if uploaded_file.name.endswith(".zip"):
-            # Extract ZIP
-            with zipfile.ZipFile(uploaded_file, "r") as zip_ref:
-                zip_ref.extractall("temp/omr_images")
-            for root, _, files in os.walk("temp/omr_images"):
-                for file in files:
-                    if file.lower().endswith((".jpg", ".jpeg", ".png")):
-                        images_to_process.append(os.path.join(root, file))
-        else:
-            # Save individual image
-            img_path = os.path.join("temp", uploaded_file.name)
-            with open(img_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            images_to_process.append(img_path)
-
-    st.subheader("Processing Results")
-    for img_path in images_to_process:
-        img_name = os.path.basename(img_path)
-        # Process each image
-        result = process_omr_image(img_path, answer_key)  # ensure your function returns a dict with 'score', 'answers', 'image'
+# ------------------- Single Image -------------------
+with tab1:
+    st.header("Single Image Grading")
+    uploaded_file = st.file_uploader("Upload a single OMR sheet", type=["jpg", "jpeg", "png"])
+    
+    if uploaded_file:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded OMR Sheet", use_container_width=True)
         
-        st.write(f"**File:** {img_name}")
-        st.write(f"**Score:** {result['score']} / 100")
-        st.write("**Answers:**")
-        st.write(result['answers'])
-        st.image(result['image'], use_container_width=True)
+        if st.button("Grade Image", key="single"):
+            with st.spinner("Grading OMR sheet..."):
+                result = process_omr_image(uploaded_file, answer_key, highlight=True)
+                st.success(f"Score: {result['score']}/100 🎯")
+                st.image(result["image"], caption="Graded OMR Sheet", use_container_width=True)
+                st.subheader("Answers Overview")
+                st.json(result["answers"])
+
+# ------------------- Batch Upload -------------------
+with tab2:
+    st.header("Batch Grading")
+    uploaded_zip = st.file_uploader("Upload ZIP of OMR sheets", type=["zip"])
+    
+    if uploaded_zip:
+        with zipfile.ZipFile(uploaded_zip) as zf:
+            filenames = [name for name in zf.namelist() if name.lower().endswith(('.png', '.jpg', '.jpeg'))]
+            st.info(f"{len(filenames)} OMR sheets found in ZIP.")
+            
+            if st.button("Grade All Images", key="batch"):
+                os.makedirs("temp_omr", exist_ok=True)
+                res
