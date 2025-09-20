@@ -1,41 +1,52 @@
-﻿��i m p o r t   s t r e a m l i t   a s   s t  
- i m p o r t   c v 2  
- i m p o r t   n u m p y   a s   n p  
- i m p o r t   t e m p f i l e  
- i m p o r t   o s  
- i m p o r t   j s o n  
- f r o m   o m r _ s c a n n e r   i m p o r t   a n a l y z e _ i m a g e ,   l o a d _ a n s w e r _ k e y s  
-  
- s t . t i t l e ( " =���  O M R   S c a n n e r   W e b   A p p " )  
-  
- #   L o a d   a n s w e r   k e y s  
- w i t h   o p e n ( " a n s w e r _ k e y _ A . j s o n " ,   " r " )   a s   f :  
-         a n s w e r _ k e y _ A   =   j s o n . l o a d ( f ) [ " v 1 " ]  
- w i t h   o p e n ( " a n s w e r _ k e y _ B . j s o n " ,   " r " )   a s   f :  
-         a n s w e r _ k e y _ B   =   j s o n . l o a d ( f ) [ " v 1 " ]  
-  
- s e t _ c h o i c e   =   s t . r a d i o ( " S e l e c t   A n s w e r   K e y " ,   [ " S e t A " ,   " S e t B " ] )  
- a n s w e r _ k e y   =   a n s w e r _ k e y _ A   i f   s e t _ c h o i c e   = =   " S e t A "   e l s e   a n s w e r _ k e y _ B  
-  
- u p l o a d e d _ f i l e s   =   s t . f i l e _ u p l o a d e r ( " U p l o a d   O M R   S h e e t s   ( j p g / p n g ) " ,   t y p e = [ " j p g " ,   " p n g " ] ,   a c c e p t _ m u l t i p l e _ f i l e s = T r u e )  
-  
- i f   u p l o a d e d _ f i l e s :  
-         r e s u l t s   =   [ ]  
-         f o r   i ,   u p l o a d e d _ f i l e   i n   e n u m e r a t e ( u p l o a d e d _ f i l e s ,   s t a r t = 1 ) :  
-                 #   S a v e   t o   t e m p   f i l e  
-                 t f i l e   =   t e m p f i l e . N a m e d T e m p o r a r y F i l e ( d e l e t e = F a l s e )  
-                 t f i l e . w r i t e ( u p l o a d e d _ f i l e . r e a d ( ) )  
-  
-                 #   P r o c e s s   w i t h   s c a n n e r  
-                 s c o r e   =   a n a l y z e _ i m a g e ( t f i l e . n a m e ,   a n s w e r _ k e y ,   r o l l _ n o = f " { s e t _ c h o i c e } _ { i } " )  
-                 r e s u l t s . a p p e n d ( ( u p l o a d e d _ f i l e . n a m e ,   s c o r e ) )  
-  
-                 #   S h o w   o r i g i n a l   &   g r a d e d   i m a g e  
-                 s t . s u b h e a d e r ( f " { u p l o a d e d _ f i l e . n a m e }   �!  S c o r e :   { s c o r e } " )  
-                 g r a d e d _ p a t h   =   o s . p a t h . j o i n ( " g r a d e d _ o u t p u t " ,   f " { s e t _ c h o i c e } _ { i } _ g r a d e d . j p g " )  
-  
-                 i f   o s . p a t h . e x i s t s ( g r a d e d _ p a t h ) :  
-                         s t . i m a g e ( g r a d e d _ p a t h ,   c a p t i o n = " G r a d e d   S h e e t " ,   u s e _ c o n t a i n e r _ w i d t h = T r u e )  
-  
-         s t . s u c c e s s ( " '  S c a n n i n g   C o m p l e t e ! " )  
- 
+﻿# -*- coding: utf-8 -*-
+import streamlit as st
+import os
+from omr_scanner import process_omr_folder  # Your scanner function
+from PIL import Image
+
+st.set_page_config(page_title="OMR Scanner", layout="centered")
+
+st.title("OMR Scanner Web App")
+st.write("""
+Upload your OMR sheets here. 
+Select the answer key set and get instant scores!
+""")
+
+# Sidebar for answer key selection
+answer_set = st.sidebar.selectbox("Select Answer Key Set", ["SetA", "SetB"])
+
+# File uploader
+uploaded_files = st.file_uploader(
+    "Upload OMR sheets (PNG/JPG)", 
+    type=["png", "jpg", "jpeg"], 
+    accept_multiple_files=True
+)
+
+if uploaded_files:
+    # Create a temporary folder to store uploaded images
+    temp_folder = "uploaded_omr_sheets"
+    os.makedirs(temp_folder, exist_ok=True)
+    
+    file_paths = []
+    for uploaded_file in uploaded_files:
+        file_path = os.path.join(temp_folder, uploaded_file.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        file_paths.append(file_path)
+    
+    st.info(f"Processing {len(file_paths)} OMR sheets with {answer_set} answer key...")
+    
+    # Call your scanner function
+    try:
+        results = process_omr_folder(file_paths, answer_set)
+        
+        st.success("Processing Complete!")
+        
+        # Display results
+        for res in results:
+            st.subheader(res["filename"])
+            st.write(f"Score: {res['score']}/{res['total']}")
+            st.table(res["details"])
+            
+    except Exception as e:
+        st.error(f"Error processing OMR sheets: {e}")
