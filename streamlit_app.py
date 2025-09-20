@@ -1,96 +1,86 @@
-# streamlit_app.py
-
 import streamlit as st
-from PIL import Image
 import os
 import zipfile
-from io import BytesIO
-from omr_scanner import load_answer_keys, grade_omr_image  # Make sure your grading functions exist
+import tempfile
+from PIL import Image
+import json
+from omr_scanner import process_omr_image, load_answer_keys, grade_omr_image  # adjust your function names if needed
 
-# ----- Page Config -----
+# ----------------- Page Config -----------------
 st.set_page_config(
     page_title="OMR Scanner",
-    page_icon="📄",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ----- UI Styles -----
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background: linear-gradient(to right, #f8f9fa, #e9ecef);
-        color: #212529;
-    }
-    .stButton>button {
-        background-color: #0d6efd;
-        color: white;
-        border-radius: 8px;
-        height: 40px;
-        width: 100%;
-    }
-    </style>
-    """, unsafe_allow_html=True
-)
+# ----------------- Sidebar -----------------
+st.sidebar.image("https://raw.githubusercontent.com/hasika5906/omr_project/main/omr_logo.png", use_container_width=True)
+st.sidebar.title("OMR Scanner")
+st.sidebar.markdown("""
+**Upload your OMR sheets** as images (JPEG, PNG) or a ZIP of multiple images.<br>
+Upload an **answer key JSON** if different from default Set A or Set B.
+""", unsafe_allow_html=True)
 
-# ----- Header -----
-st.title("📄 Interactive OMR Scanner")
-st.markdown("Upload OMR images or a ZIP file and instantly get your scores!")
+# Select answer key
+answer_key_set = st.sidebar.selectbox("Select Answer Key Set", ["A", "B"])
+uploaded_key = st.sidebar.file_uploader("Upload Answer Key JSON (Optional)", type=["json"])
 
-# ----- Sidebar: Answer Key Selection -----
-st.sidebar.header("Configuration")
-answer_key_set = st.sidebar.selectbox("Select Answer Key Set:", ["A", "B"])
-BASE_DIR = os.path.dirname(__file__)
-answer_key_path = os.path.join(BASE_DIR, f"answer_key_Set{answer_key_set}.json")
+# ----------------- Load Answer Key -----------------
+if uploaded_key:
+    answer_key = json.load(uploaded_key)
+else:
+    default_path = os.path.join(os.path.dirname(__file__), f"answer_key_Set{answer_key_set}.json")
+    if os.path.exists(default_path):
+        with open(default_path, "r") as f:
+            answer_key = json.load(f)
+    else:
+        st.error(f"Answer key file not found: {default_path}")
+        st.stop()
 
-# Load Answer Key
-try:
-    answer_key = load_answer_keys(answer_key_path)
-except FileNotFoundError:
-    st.error(f"Answer key file not found: {answer_key_path}")
-    st.stop()
-
-# ----- File Upload -----
-st.sidebar.header("Upload OMR Sheets")
-uploaded_files = st.sidebar.file_uploader(
-    "Upload image(s) or a ZIP file",
+# ----------------- Upload OMR Images -----------------
+uploaded_files = st.file_uploader(
+    "Upload OMR images or a ZIP of images",
     type=["jpg", "jpeg", "png", "zip"],
     accept_multiple_files=True
 )
 
-def process_uploaded_file(file):
-    """Return a list of images from uploaded file"""
-    images = []
-    if file.name.endswith(".zip"):
-        with zipfile.ZipFile(file) as z:
-            for fname in z.namelist():
-                if fname.lower().endswith((".jpg", ".jpeg", ".png")):
-                    images.append(Image.open(BytesIO(z.read(fname))))
-    else:
-        images.append(Image.open(file))
-    return images
-
-# ----- Main Processing -----
 if uploaded_files:
-    all_images = []
+    images_to_process = []
+
     for file in uploaded_files:
-        all_images.extend(process_uploaded_file(file))
+        if file.name.endswith(".zip"):
+            # Extract ZIP
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                with zipfile.ZipFile(file, 'r') as zip_ref:
+                    zip_ref.extractall(tmpdirname)
+                    for img_file in os.listdir(tmpdirname):
+                        img_path = os.path.join(tmpdirname, img_file)
+                        images_to_process.append(img_path)
+        else:
+            # Save uploaded image temporarily
+            temp_file_path = os.path.join(tempfile.gettempdir(), file.name)
+            with open(temp_file_path, "wb") as f:
+                f.write(file.read())
+            images_to_process.append(temp_file_path)
 
-    st.subheader("Grading Results")
-    for idx, img in enumerate(all_images, start=1):
-        st.markdown(f"### Image {idx}")
+    st.success(f"Found {len(images_to_process)} image(s) for processing!")
+
+    # ----------------- Process Images -----------------
+    results = []
+    for img_path in images_to_process:
+        try:
+            grade, feedback = grade_omr_image(img_path, answer_key)  # adjust function names
+            results.append({"image": img_path, "score": grade, "feedback": feedback})
+        except Exception as e:
+            st.warning(f"Failed to process {img_path}: {e}")
+
+    # ----------------- Display Results -----------------
+    st.markdown("---")
+    st.header("Results")
+    for res in results:
+        st.subheader(os.path.basename(res["image"]))
+        img = Image.open(res["image"])
         st.image(img, use_container_width=True)
-
-        # Convert PIL image to proper format for your grading function if needed
-        score, per_question = grade_omr_image(img, answer_key)
-
-        st.success(f"Total Score: {score}/{len(answer_key)}")
-
-        # Optional: show per-question results
-        st.write("Per Question Feedback:")
-        for q_num, ans in per_question.items():
-            st.write(f"Q{q_num}: {ans}")
-
-else:
-    st.info("Please upload at least one OMR image or a ZIP file to start grading.")
+        st.markdown(f"**Score:** {res['score']}")
+        st.markdown("**Feedback:**")
+        st.json(res["feedback"])
