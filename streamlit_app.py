@@ -1,52 +1,46 @@
-# -*- coding: utf-8 -*-
+# streamlit_app.py
 import streamlit as st
+from omr_scanner import process_omr_folder
 import os
-from omr_scanner import process_omr_folder  # Your scanner function
-from PIL import Image
 
 st.set_page_config(page_title="OMR Scanner", layout="centered")
 
 st.title("OMR Scanner Web App")
-st.write("""
-Upload your OMR sheets here. 
-Select the answer key set and get instant scores!
-""")
+st.write("Upload a folder of OMR sheets and get instant scores!")
 
-# Sidebar for answer key selection
-answer_set = st.sidebar.selectbox("Select Answer Key Set", ["SetA", "SetB"])
+# Upload answer key
+answer_key_file = st.file_uploader("Upload Answer Key JSON", type="json")
 
-# File uploader
-uploaded_files = st.file_uploader(
-    "Upload OMR sheets (PNG/JPG)", 
-    type=["png", "jpg", "jpeg"], 
-    accept_multiple_files=True
-)
+# Upload OMR images folder as a zip
+omr_zip = st.file_uploader("Upload OMR Sheets (ZIP)", type="zip")
 
-if uploaded_files:
-    # Create a temporary folder to store uploaded images
-    temp_folder = "uploaded_omr_sheets"
-    os.makedirs(temp_folder, exist_ok=True)
-    
-    file_paths = []
-    for uploaded_file in uploaded_files:
-        file_path = os.path.join(temp_folder, uploaded_file.name)
-        with open(file_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        file_paths.append(file_path)
-    
-    st.info(f"Processing {len(file_paths)} OMR sheets with {answer_set} answer key...")
-    
-    # Call your scanner function
-    try:
-        results = process_omr_folder(file_paths, answer_set)
-        
-        st.success("Processing Complete!")
-        
-        # Display results
-        for res in results:
-            st.subheader(res["filename"])
-            st.write(f"Score: {res['score']}/{res['total']}")
-            st.table(res["details"])
-            
-    except Exception as e:
-        st.error(f"Error processing OMR sheets: {e}")
+if st.button("Process OMR Sheets"):
+    if answer_key_file is None or omr_zip is None:
+        st.warning("Please upload both answer key and OMR sheets ZIP.")
+    else:
+        import zipfile
+        import tempfile
+
+        # Save uploaded files to temporary files
+        with tempfile.TemporaryDirectory() as tmpdir:
+            answer_key_path = os.path.join(tmpdir, "answer_key.json")
+            with open(answer_key_path, "wb") as f:
+                f.write(answer_key_file.read())
+
+            # Extract ZIP
+            omr_folder_path = os.path.join(tmpdir, "OMR_Images")
+            os.makedirs(omr_folder_path, exist_ok=True)
+            with zipfile.ZipFile(omr_zip, "r") as zip_ref:
+                zip_ref.extractall(omr_folder_path)
+
+            # Process all images
+            st.info("Processing OMR sheets, please wait...")
+            results = process_omr_folder(omr_folder_path, answer_key_path)
+
+            if results:
+                st.success("Processing Complete!")
+                st.write("### Results")
+                for file, score in results.items():
+                    st.write(f"**{file}** : {score}")
+            else:
+                st.error("No images found or failed to process.")
