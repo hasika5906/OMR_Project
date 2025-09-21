@@ -56,7 +56,6 @@ def login_page():
         if username.strip() != "" and password.strip() != "":
             st.session_state['logged_in'] = True
             st.session_state['page'] = "Instructions"
-            st.experimental_rerun()
         else:
             st.error("Please enter username and password")
 
