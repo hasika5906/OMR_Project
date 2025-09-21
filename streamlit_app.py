@@ -15,37 +15,68 @@ st.set_page_config(page_title="OMR Scanner", layout="wide", initial_sidebar_stat
 st.markdown(
     """
     <style>
+    /* Overall App Background & Text */
     .stApp {
         background: linear-gradient(135deg, #1e1e2f, #0b0b17);
         color: #00ffcc;
         font-family: 'Arial', sans-serif;
     }
+
+    /* Big Title */
     .big-title {
         font-size: 36px;
         font-weight: bold;
         text-align: center;
         color: #00ffcc !important;
     }
+
+    /* Instruction, About, Contact Boxes */
     .instructions, .about-box, .contact-box {
         background-color: rgba(0, 255, 204, 0.1);
         padding: 15px;
         border-radius: 10px;
         margin-bottom: 15px;
         color: #00ffcc !important;
+        font-family: 'Arial', sans-serif;
     }
     .instructions ul, .about-box ul, .contact-box ul {
         color: #00ffcc !important;
     }
+
+    /* Buttons */
     div.stButton > button:first-child {
         background-color: #00ffcc !important;
         color: black !important;
         font-weight: bold;
     }
+
+    /* Footer */
     .footer {
         color: #00ffcc;
         text-align: center;
         font-size: 14px;
         margin-top: 20px;
+    }
+
+    /* Login & Upload Section: White Text on Transparent Boxes */
+    .login-box, .upload-box {
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0px 0px 20px rgba(0, 255, 204, 0.4);
+        margin-bottom: 20px;
+        color: white !important;
+    }
+
+    .login-box label, .upload-box label {
+        color: white !important;
+        font-weight: bold;
+        font-family: Arial !important;
+    }
+
+    .stTextInput>div>div>input, .stFileUploader>div>div>input {
+        color: white !important;
+        font-family: Arial !important;
     }
     </style>
     """,
@@ -70,6 +101,7 @@ def login_page():
         width=120,
     )
 
+    st.markdown('<div class="login-box">', unsafe_allow_html=True)
     username = st.text_input("👤 Username")
     password = st.text_input("🔑 Password", type="password")
 
@@ -81,6 +113,7 @@ def login_page():
             st.success(f"Logged in as {username} (prototype)")
         else:
             st.error("Please enter username and password (prototype mode accepts any non-empty values).")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ===============================
 # INSTRUCTIONS / NAVIGATION PAGE
@@ -115,6 +148,7 @@ def instructions_page():
 # UPLOAD / PROCESSING PAGE
 # ===============================
 def upload_page():
+    st.markdown('<div class="upload-box">', unsafe_allow_html=True)
     uploaded_files = st.file_uploader(
         "Upload OMR sheet images or ZIP", 
         type=["jpg", "jpeg", "png", "zip"], 
@@ -166,6 +200,7 @@ def upload_page():
 
     if st.button("Back to Instructions"):
         st.session_state["page"] = "instructions"
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ===============================
 # ABOUT PAGE
