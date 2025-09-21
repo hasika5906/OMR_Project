@@ -12,7 +12,7 @@ st.markdown(
     """
     <style>
         body {
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            background: linear-gradient(135deg, #000000, #434343, #1f4037, #99f2c8);
             color: white;
         }
         .big-title {
@@ -33,7 +33,7 @@ st.markdown(
             background: linear-gradient(180deg, #1f1c2c, #928dab);
         }
         .scrolling-text {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
             color: #ffcc00;
             white-space: nowrap;
@@ -51,8 +51,8 @@ if "authenticated" not in st.session_state:
 def login_page():
     st.markdown('<p class="big-title">🔐 Welcome to OMR Scanner</p>', unsafe_allow_html=True)
 
-    # Logo
-    st.image("assets/logo.png", width=180)
+    # Logo (online, no local assets)
+    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Check_green_icon.svg/768px-Check_green_icon.svg.png", width=120)
 
     username = st.text_input("👤 Username")
     password = st.text_input("🔑 Password", type="password")
@@ -88,15 +88,15 @@ def dashboard():
         st.session_state["authenticated"] = False
         st.rerun()
 
-    # Logo & Banner
-    st.image("assets/logo.png", width=160)
+    # Logo & Banner (online, no local assets)
+    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Check_green_icon.svg/768px-Check_green_icon.svg.png", width=100)
     st.markdown('<p class="big-title">📊 OMR Scanner Dashboard</p>', unsafe_allow_html=True)
-    st.image("assets/banner.jpg", use_container_width=True)  # add a cool banner image
+    st.image("https://picsum.photos/1200/300?grayscale", use_container_width=True)  # dynamic banner
 
     # 🚩 Scrolling marquee text (large size)
     st.markdown(
         """
-        <marquee behavior="scroll" direction="left" scrollamount="8">
+        <marquee behavior="scroll" direction="left" scrollamount="10">
             <span class="scrolling-text">📢 Welcome to OMR Scanner! Upload your OMR sheets and get results instantly 🚀</span>
         </marquee>
         """,
