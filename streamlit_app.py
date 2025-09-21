@@ -2,126 +2,151 @@ import streamlit as st
 import zipfile
 import os
 from PIL import Image
-from omr_scanner import process_omr_image, load_answer_keys  # ensure these exist
+from omr_scanner import process_omr_image, load_answer_keys  # keep your logic intact
 
-# ---------------------- PAGE CONFIG ----------------------
-st.set_page_config(page_title="OMR Scanner", layout="wide")
-
-# ---------------------- CUSTOM CSS ----------------------
-st.markdown(
-    """
-    <style>
-        body {
-            background: linear-gradient(135deg, #000000, #434343, #1f4037, #99f2c8);
-            color: white;
-        }
-        .big-title {
-            font-size: 42px;
-            font-weight: bold;
-            color: #00e6e6;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .instructions {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 15px;
-            border-radius: 12px;
-            border: 1px solid #00e6e6;
-            margin-top: 20px;
-        }
-        .sidebar .sidebar-content {
-            background: linear-gradient(180deg, #1f1c2c, #928dab);
-        }
-        .scrolling-text {
-            font-size: 32px;
-            font-weight: bold;
-            color: #ffcc00;
-            white-space: nowrap;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
+# ===============================
+# Page Configuration
+# ===============================
+st.set_page_config(
+    page_title="OMR Scanner Web App",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-# ---------------------- SESSION STATE ----------------------
+# ===============================
+# Initialize Session State
+# ===============================
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
-# ---------------------- SIGN-IN PAGE ----------------------
-def login_page():
-    st.markdown('<p class="big-title">🔐 Welcome to OMR Scanner</p>', unsafe_allow_html=True)
+# ===============================
+# CSS for Dark Gradient and Styling
+# ===============================
+st.markdown(
+    """
+    <style>
+    body {
+        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        color: #ffffff;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .big-title {
+        font-size: 36px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 10px;
+        color: #ffdd00;
+    }
+    .instructions {
+        font-size: 18px;
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .sidebar .sidebar-content {
+        background: linear-gradient(180deg, #0f2027, #203a43);
+        color: white;
+    }
+    .stButton>button {
+        background-color: #ffdd00;
+        color: black;
+        font-weight: bold;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-    # Logo (online, no local assets)
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Check_green_icon.svg/768px-Check_green_icon.svg.png", width=120)
+# ===============================
+# LOGIN PAGE (Option A)
+# ===============================
+def login_page():
+    st.markdown('<p class="big-title">🔐 Welcome to OMR Scanner (Prototype)</p>', unsafe_allow_html=True)
+
+    # Logo (online placeholder)
+    st.image(
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Check_green_icon.svg/768px-Check_green_icon.svg.png",
+        width=120,
+    )
 
     username = st.text_input("👤 Username")
     password = st.text_input("🔑 Password", type="password")
 
     if st.button("Login", type="primary"):
-        if username == "admin" and password == "1234":  # replace with real creds
+        # Accept any non-empty username/password
+        if username.strip() != "" and password.strip() != "":
             st.session_state["authenticated"] = True
-            st.rerun()
+            st.success(f"Logged in as {username} (prototype mode)")
+            st.experimental_rerun()
         else:
-            st.error("❌ Invalid credentials. Try again.")
+            st.error("Please enter a username and password (prototype mode accepts any non-empty values).")
 
     st.markdown(
         """
         <div class="instructions">
-            <h4>ℹ️ Instructions</h4>
+            <h4>ℹ️ Prototype Login Instructions</h4>
             <ul>
-                <li>Use your username & password to sign in.</li>
-                <li>After login, you can upload answer keys and OMR sheets.</li>
-                <li>Contact support if login fails.</li>
+                <li>Enter any username and password to login.</li>
+                <li>This is for demo/prototype only.</li>
             </ul>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-# ---------------------- DASHBOARD ----------------------
-def dashboard():
-    st.sidebar.title("📌 Navigation")
-    choice = st.sidebar.radio("Go to", ["📂 Upload & Process", "ℹ️ About", "📞 Contact"])
+# ===============================
+# MAIN APP PAGE
+# ===============================
+def main_app():
+    st.markdown('<p class="big-title">📝 OMR Scanner Dashboard</p>', unsafe_allow_html=True)
 
-    st.sidebar.markdown("---")
-    if st.sidebar.button("🚪 Logout"):
-        st.session_state["authenticated"] = False
-        st.rerun()
+    # Sidebar Menu
+    menu = ["Upload & Process", "About", "Contact"]
+    choice = st.sidebar.selectbox("Menu", menu)
 
-    # Logo & Banner (online, no local assets)
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Check_green_icon.svg/768px-Check_green_icon.svg.png", width=100)
-    st.markdown('<p class="big-title">📊 OMR Scanner Dashboard</p>', unsafe_allow_html=True)
-    st.image("https://picsum.photos/1200/300?grayscale", use_container_width=True)  # dynamic banner
+    if choice == "About":
+        st.markdown("## About This App")
+        st.markdown(
+            """
+            This OMR Scanner Web App allows you to upload OMR sheets (JPEG, PNG, ZIP) and process them against an answer key.
+            <br>Prototype demo with interactive dark UI and gradients.
+            """
+        )
 
-    # 🚩 Scrolling marquee text (large size)
-    st.markdown(
-        """
-        <marquee behavior="scroll" direction="left" scrollamount="10">
-            <span class="scrolling-text">📢 Welcome to OMR Scanner! Upload your OMR sheets and get results instantly 🚀</span>
-        </marquee>
-        """,
-        unsafe_allow_html=True
-    )
+    elif choice == "Contact":
+        st.markdown("## Contact Us")
+        st.markdown(
+            """
+            **Email:** support@example.com  
+            **Phone:** +91-XXXXXXXXXX  
+            **Address:** 123 Demo Street, Prototype City
+            """
+        )
 
-    if choice == "📂 Upload & Process":
-        st.subheader("📂 Upload OMR Sheets")
-
+    else:
+        # ===============================
+        # Upload Section
+        # ===============================
         uploaded_files = st.file_uploader(
             "Upload OMR sheet images (JPEG, PNG) or ZIP of images",
             type=["jpg", "jpeg", "png", "zip"],
-            accept_multiple_files=True
+            accept_multiple_files=True,
         )
 
         answer_key_path = st.file_uploader("Upload Answer Key JSON", type=["json"])
 
         if uploaded_files and answer_key_path:
-            answer_key_file_path = os.path.join("temp", "answer_key.json")
+            # Save uploaded answer key
             os.makedirs("temp", exist_ok=True)
+            answer_key_file_path = os.path.join("temp", "answer_key.json")
             with open(answer_key_file_path, "wb") as f:
                 f.write(answer_key_path.getbuffer())
 
+            # Load answer key
             answer_key = load_answer_keys(answer_key_file_path)
 
+            # Prepare images to process
             images_to_process = []
             for uploaded_file in uploaded_files:
                 if uploaded_file.name.endswith(".zip"):
@@ -137,37 +162,21 @@ def dashboard():
                         f.write(uploaded_file.getbuffer())
                     images_to_process.append(img_path)
 
+            # Display Results
             st.subheader("📊 Processing Results")
             for img_path in images_to_process:
                 img_name = os.path.basename(img_path)
-                result = process_omr_image(img_path, answer_key)
-
-                st.write(f"**File:** {img_name}")
-                st.write(f"**Score:** {result['score']} / 100")
-                st.write("**Answers:**")
-                st.json(result['answers'])
+                result = process_omr_image(img_path, answer_key)  # your existing function
+                st.markdown(f"### File: {img_name}")
+                st.markdown(f"**Score:** {result['score']} / 100")
+                st.markdown("**Answers:**")
+                st.write(result['answers'])
                 st.image(result['image'], use_container_width=True)
 
-    elif choice == "ℹ️ About":
-        st.title("ℹ️ About OMR Scanner")
-        st.markdown("""
-        This is a smart **OMR Sheet Evaluation Tool** 🎯  
-        Features:
-        - Upload answer keys in JSON format.  
-        - Upload scanned OMR sheets as images or ZIP.  
-        - Get **instant results** with score and answers.  
-        """)
-
-    elif choice == "📞 Contact":
-        st.title("📞 Contact Us")
-        st.markdown("""
-        - 📧 Email: support@omrscanner.com  
-        - 🌐 Website: [www.omrscanner.com](https://www.omrscanner.com)  
-        - ☎️ Phone: +91-1234567890  
-        """)
-
-# ---------------------- MAIN ----------------------
+# ===============================
+# App Execution
+# ===============================
 if not st.session_state["authenticated"]:
     login_page()
 else:
-    dashboard()
+    main_app()
