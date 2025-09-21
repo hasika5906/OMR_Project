@@ -17,25 +17,28 @@ st.markdown(
     <style>
     .stApp {
         background: linear-gradient(135deg, #1e1e2f, #0b0b17);
-        color: #ffffff;
+        color: #00ffcc;
         font-family: 'Arial', sans-serif;
     }
     .big-title {
         font-size: 36px;
         font-weight: bold;
         text-align: center;
-        color: #00ffcc;
+        color: #00ffcc !important;
     }
-    .instructions {
+    .instructions, .about-box, .contact-box {
         background-color: rgba(0, 255, 204, 0.1);
         padding: 15px;
         border-radius: 10px;
         margin-bottom: 15px;
-        color: #00ffcc;
+        color: #00ffcc !important;
+    }
+    .instructions ul, .about-box ul, .contact-box ul {
+        color: #00ffcc !important;
     }
     div.stButton > button:first-child {
-        background-color: #00ffcc;
-        color: black;
+        background-color: #00ffcc !important;
+        color: black !important;
         font-weight: bold;
     }
     .footer {
@@ -88,8 +91,8 @@ def instructions_page():
     st.markdown(
         """
         <div class="instructions">
-        <h4>Instructions:</h4>
-        <ul>
+        <h4 style="color:#00ffcc;">Instructions:</h4>
+        <ul style="color:#00ffcc;">
             <li>Upload OMR sheet images (JPEG, PNG) or ZIP of images.</li>
             <li>Upload corresponding answer key JSON file.</li>
             <li>Results will display score and detected answers with image.</li>
@@ -169,11 +172,16 @@ def upload_page():
 # ===============================
 def about_page():
     st.markdown('<h2 style="color:#00ffcc;">ℹ️ About</h2>', unsafe_allow_html=True)
-    st.write("""
-        This is a prototype OMR Scanner app.
-        - Upload OMR sheets and get automatic grading.
-        - Built using Python and Streamlit.
-        """)
+    st.markdown(
+        """
+        <div class="about-box">
+        This is a prototype OMR Scanner app.<br>
+        - Upload OMR sheets and get automatic grading.<br>
+        - Built using Python and Streamlit.<br>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     if st.button("Back to Instructions"):
         st.session_state["page"] = "instructions"
 
@@ -182,11 +190,16 @@ def about_page():
 # ===============================
 def contact_page():
     st.markdown('<h2 style="color:#00ffcc;">📞 Contact</h2>', unsafe_allow_html=True)
-    st.write("""
-        For queries:
-        - Email: prototype@example.com
-        - Phone: +91-1234567890
-        """)
+    st.markdown(
+        """
+        <div class="contact-box">
+        For queries:<br>
+        - Email: prototype@example.com<br>
+        - Phone: +91-1234567890<br>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     if st.button("Back to Instructions"):
         st.session_state["page"] = "instructions"
 
